@@ -97,87 +97,86 @@ savings = calculate_savings(miles_driven, burgers, shower_minutes, showers_per_w
 total_cost  = driving["drive_cost"] + driving["rideshare_cost"] + energy["ac_cost"] + energy["phantom_cost"]
 total_water = water["shower_gallons"] + food["total_water_food"]
 
-# ── receipt ────────────────────────────────────────────────────────────────────
-if st.button("🧾 Print My Receipt", use_container_width=True, type="primary"):
+# ── live receipt (updates as sliders move) ────────────────────────────────────
+st.markdown("---")
+st.markdown(f"### 🧾 YOUR RECEIPT — LIVE")
+st.caption(f"Week of {date.today().strftime('%B %d, %Y')} | Updates as you go 💚")
 
-    st.markdown(f"### 🧾 THE GUILT RECEIPT")
-    st.caption(f"Week of {date.today().strftime('%B %d, %Y')} | Issued with love 💚")
+# Driving
+st.markdown("##### 🚗 Getting Around")
+col1, col2 = st.columns([3, 1])
+col1.write(f"Driving ({miles_driven} mi)")
+col2.write(f"**${driving['drive_cost']:.2f}**")
+col1, col2 = st.columns([3, 1])
+col1.write("Gas burned")
+col2.write(f"**{driving['gas_gallons']:.1f} gal**")
+col1, col2 = st.columns([3, 1])
+col1.write(f"Rideshare ({rideshare_trips} trips)")
+col2.write(f"**${driving['rideshare_cost']:.2f}**")
+col1, col2 = st.columns([3, 1])
+col1.write("Time stuck in traffic")
+col2.write(f"**{driving['hours_in_traffic']} hrs**")
+st.caption(f"🕐 That's {driving['hours_in_traffic']} hours you'll never get back.")
 
-    # Driving
-    st.markdown("##### 🚗 Getting Around")
-    col1, col2 = st.columns([3, 1])
-    col1.write(f"Driving ({miles_driven} mi)")
-    col2.write(f"**${driving['drive_cost']:.2f}**")
-    col1, col2 = st.columns([3, 1])
-    col1.write("Gas burned")
-    col2.write(f"**{driving['gas_gallons']:.1f} gal**")
-    col1, col2 = st.columns([3, 1])
-    col1.write(f"Rideshare ({rideshare_trips} trips)")
-    col2.write(f"**${driving['rideshare_cost']:.2f}**")
-    col1, col2 = st.columns([3, 1])
-    col1.write("Time stuck in traffic")
-    col2.write(f"**{driving['hours_in_traffic']} hrs**")
-    st.caption(f"🕐 That's {driving['hours_in_traffic']} hours you'll never get back.")
+st.divider()
 
-    st.divider()
+# Food
+st.markdown("##### 🍔 What You Ate")
+col1, col2 = st.columns([3, 1])
+col1.write(f"Beef meals ({burgers}x)")
+col2.write(f"**{food['water_beef']:,} gal water**")
+col1, col2 = st.columns([3, 1])
+col1.write(f"Chicken meals ({chicken_meals}x)")
+col2.write(f"**{food['water_chicken']:,} gal water**")
+st.caption(f"🐄 Your meals alone used {food['total_water_food']:,} gallons of water this week.")
 
-    # Food
-    st.markdown("##### 🍔 What You Ate")
-    col1, col2 = st.columns([3, 1])
-    col1.write(f"Beef meals ({burgers}x)")
-    col2.write(f"**{food['water_beef']:,} gal water**")
-    col1, col2 = st.columns([3, 1])
-    col1.write(f"Chicken meals ({chicken_meals}x)")
-    col2.write(f"**{food['water_chicken']:,} gal water**")
-    st.caption(f"🐄 Your meals alone used {food['total_water_food']:,} gallons of water this week.")
+st.divider()
 
-    st.divider()
+# Showers
+st.markdown("##### 🚿 Showers")
+col1, col2 = st.columns([3, 1])
+col1.write(f"{showers_per_week} showers × {shower_minutes} min")
+col2.write(f"**{water['shower_gallons']:.0f} gal**")
+st.caption(f"💧 That's enough to fill {water['bathtubs']} bathtubs.")
 
-    # Showers
-    st.markdown("##### 🚿 Showers")
-    col1, col2 = st.columns([3, 1])
-    col1.write(f"{showers_per_week} showers × {shower_minutes} min")
-    col2.write(f"**{water['shower_gallons']:.0f} gal**")
-    st.caption(f"💧 That's enough to fill {water['bathtubs']} bathtubs.")
+st.divider()
 
-    st.divider()
+# Energy
+st.markdown("##### ❄️ Home Energy")
+col1, col2 = st.columns([3, 1])
+col1.write(f"AC ({ac_hours} hrs)")
+col2.write(f"**${energy['ac_cost']:.2f}**")
+col1, col2 = st.columns([3, 1])
+col1.write(f"Phantom devices ({devices_left_on} plugged in)")
+col2.write(f"**${energy['phantom_cost']:.2f}**")
+st.caption(f"🔌 = {energy['charger_equiv']} phone chargers left plugged in all month.")
 
-    # Energy
-    st.markdown("##### ❄️ Home Energy")
-    col1, col2 = st.columns([3, 1])
-    col1.write(f"AC ({ac_hours} hrs)")
-    col2.write(f"**${energy['ac_cost']:.2f}**")
-    col1, col2 = st.columns([3, 1])
-    col1.write(f"Phantom devices ({devices_left_on} plugged in)")
-    col2.write(f"**${energy['phantom_cost']:.2f}**")
-    st.caption(f"🔌 = {energy['charger_equiv']} phone chargers left plugged in all month.")
+st.divider()
 
-    st.divider()
+# Totals
+st.markdown(f"""
+<div class="receipt-total">
+    💸 Weekly Cost to You: ${total_cost:.2f} &nbsp;|&nbsp; 💰 That's ${total_cost * 52:,.0f}/year<br>
+    💧 Total Water Used: {total_water:,.0f} gallons<br>
+    🕐 Time Lost to Traffic: {driving['hours_in_traffic']} hrs this week
+</div>
+""", unsafe_allow_html=True)
 
-    # Totals
-    st.markdown(f"""
-    <div class="receipt-total">
-        💸 Weekly Cost to You: ${total_cost:.2f}<br>
-        💧 Total Water Used: {total_water:,.0f} gallons<br>
-        🕐 Time Lost to Traffic: {driving['hours_in_traffic']} hrs
-    </div>
-    """, unsafe_allow_html=True)
+st.divider()
 
-    st.divider()
+# Savings / behavior change
+st.markdown("#### 🌱 Small Swaps, Real Savings")
+st.markdown(f"""
+<div class="receipt-savings">
+✅ Replace <b>30% of driving</b> with transit or walking → save <b>${savings['saved_drive']:.2f}/week</b> (${savings['saved_drive_yearly']:.0f}/year)<br><br>
+✅ Swap <b>half your beef meals</b> for chicken → save <b>{savings['saved_water_food']:,.0f} gallons</b> of water/week<br><br>
+✅ Cut your <b>shower by {savings['shower_minutes_cut']} min</b> → save <b>{savings['saved_shower']:.0f} gallons</b> this week<br><br>
+✅ Turn <b>AC down 25%</b> → save <b>${savings['saved_ac']:.2f}/week</b> (${savings['saved_ac_yearly']:.0f}/year)
+</div>
+""", unsafe_allow_html=True)
 
-    # Savings / behavior change
-    st.markdown("#### 🌱 Small Swaps, Real Savings")
-    st.markdown(f"""
-    <div class="receipt-savings">
-    ✅ Replace <b>30% of driving</b> with transit or walking → save <b>${savings['saved_drive']:.2f}/week</b> (${savings['saved_drive_yearly']:.0f}/year)<br><br>
-    ✅ Swap <b>half your beef meals</b> for chicken → save <b>{savings['saved_water_food']:,.0f} gallons</b> of water/week<br><br>
-    ✅ Cut your <b>shower by {savings['shower_minutes_cut']} min</b> → save <b>{savings['saved_shower']:.0f} gallons</b> this week<br><br>
-    ✅ Turn <b>AC down 25%</b> → save <b>${savings['saved_ac']:.2f}/week</b> (${savings['saved_ac_yearly']:.0f}/year)
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="receipt-tagline">
-        Data sourced from EPA, USDA & EIA &nbsp;|&nbsp; Not here to judge. Just here to show you the math. 🧾
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<div class="receipt-tagline">
+    Data sourced from EPA, USDA & EIA &nbsp;|&nbsp; Not here to judge. Just here to show you the math. 🧾
+</div>
+""", unsafe_allow_html=True)
