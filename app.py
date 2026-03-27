@@ -7,6 +7,7 @@ from utils.calculator import (
     calculate_energy,
     calculate_savings,
 )
+from utils.pdf_generator import generate_receipt_pdf
 
 # ── page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -180,3 +181,27 @@ st.markdown("""
     Data sourced from EPA, USDA & EIA &nbsp;|&nbsp; Not here to judge. Just here to show you the math. 🧾
 </div>
 """, unsafe_allow_html=True)
+
+st.divider()
+
+# ── PDF download ───────────────────────────────────────────────────────────────
+inputs = {
+    "miles_driven":     miles_driven,
+    "rideshare_trips":  rideshare_trips,
+    "burgers":          burgers,
+    "chicken_meals":    chicken_meals,
+    "shower_minutes":   shower_minutes,
+    "showers_per_week": showers_per_week,
+    "ac_hours":         ac_hours,
+    "devices_left_on":  devices_left_on,
+}
+
+pdf_buffer = generate_receipt_pdf(driving, food, water, energy, savings, total_cost, total_water, inputs)
+
+st.download_button(
+    label="📄 Download My Receipt as PDF",
+    data=pdf_buffer,
+    file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.pdf",
+    mime="application/pdf",
+    use_container_width=True,
+)
