@@ -29,6 +29,6 @@ All conversion factors are sourced from EPA, USDA, and DOE published data hardco
 
 ## Team
 
-- Aditya - Designed frontend and .pdf export
-- Nirav - Repo owner and project manager
-- Josh - Designed history and .json import/export features
+- Aditya - Designed frontend and .pdf export. Curated project demo.
+- Nirav - Repo owner and project manager. Assisted other team members with any problems.
+- Josh - Designed history and .json import/export features.
