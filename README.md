@@ -1,11 +1,14 @@
-# 🧾 The Guilt Receipt
+# The Guilt Receipt
+Track your weekly driving, food, water, and energy usage and read it in an organized reciept!
 
-A week of your habits, handed back to you as a bill.
+## Features:
+- Export as a PDF
+- Compare your stats to the averages in the US
+- Export/Import JSON files to keep a history
 
-Enter your driving, food, water, and energy usage — the app converts it into real dollars, real gallons, and real hours of your life. No carbon math, no preachy stats. Just the actual cost of your week.
+## [See it in action!](https://guiltreciept-hackworks2026.streamlit.app/)
 
-## Running locally
-
+...or you can run it locally like so:
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
@@ -13,7 +16,7 @@ streamlit run app.py
 
 ## How the numbers work
 
-All conversion factors are sourced from EPA, USDA, and DOE published data — hardcoded into the app as constants. No black box, no AI guessing. Just math on top of real research.
+All conversion factors are sourced from EPA, USDA, and DOE published data hardcoded into the app as constants.
 
 | Factor | Source | Value |
 |--------|--------|-------|
@@ -26,6 +29,6 @@ All conversion factors are sourced from EPA, USDA, and DOE published data — ha
 
 ## Team
 
-- Aditya — 
-- Nirav — 
-- Josh —
+- Aditya - Designed frontend and .pdf export
+- Nirav - Repo owner and project manager
+- Josh - Designed history and .json import/export features
