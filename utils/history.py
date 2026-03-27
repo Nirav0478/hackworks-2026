@@ -20,8 +20,14 @@ def export_history_json():
 def import_history_json(raw):
     try:
         data = json.loads(raw)
+        if isinstance(data, dict):
+            data = [data]
         if not isinstance(data, list):
-            return False, "File doesn't look right — expected a list of receipts."
+            return False, "File doesn't look right — expected a receipt or list of receipts."
+        # patch any entries missing saved_at
+        for entry in data:
+            if "saved_at" not in entry:
+                entry["saved_at"] = entry.get("week_of", "unknown")
         st.session_state.receipt_history = data
         return True, f"Loaded {len(data)} receipt(s)."
     except json.JSONDecodeError:

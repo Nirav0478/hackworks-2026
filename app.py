@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 import streamlit as st
-from datetime import date
+from datetime import date, datetime
 
 from utils.calculator import (
     calculate_driving,
@@ -125,6 +125,29 @@ inputs = {
     "devices_left_on": devices_left_on,
 }
 
+# auto-save once per day — checks if we've already saved today
+today_str = date.today().strftime("%B %d, %Y")
+already_saved_today = any(
+    r.get("week_of") == today_str
+    for r in st.session_state.receipt_history
+)
+
+if not already_saved_today:
+    st.session_state.receipt_history.insert(0, {
+        "week_of": today_str,
+        "saved_at": datetime.now().strftime("%B %d, %Y at %I:%M %p"),
+        "inputs": inputs,
+        "results": {
+            "driving": driving,
+            "food": food,
+            "water": water,
+            "energy": energy,
+            "savings": savings,
+            "total_cost": total_cost,
+            "total_water": total_water,
+        },
+    })
+
 tab1, tab2 = st.tabs(["My Receipt", "How I Compare"])
 
 with tab1:
@@ -232,7 +255,7 @@ with tab1:
             data=json.dumps(single_receipt, indent=2),
             file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.json",
             mime="application/json",
-            use_container_width=True,
+            width="stretch",
         )
 
     with col_pdf:
@@ -242,7 +265,7 @@ with tab1:
             data=pdf,
             file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.pdf",
             mime="application/pdf",
-            use_container_width=True,
+            width="stretch",
         )
 
     # history
@@ -256,10 +279,10 @@ with tab1:
                 data=export_history_json(),
                 file_name="guilt_receipts.json",
                 mime="application/json",
-                use_container_width=True,
+                width="stretch",
             )
         with col_clr:
-            if st.button("Clear history", use_container_width=True):
+            if st.button("Clear history", width="stretch"):
                 st.session_state.receipt_history = []
                 st.rerun()
 
@@ -268,7 +291,7 @@ with tab1:
             inp = receipt.get("inputs", {})
             label = f"{receipt['week_of']}  |  ${r['total_cost']:.2f} cost  |  {r['total_water']:,.0f} gal water"
             with st.expander(label, expanded=(i == 0)):
-                st.caption(f"Saved at {receipt['saved_at']}")
+                st.caption(f"Saved at {receipt.get('saved_at', receipt.get('week_of', 'unknown'))}")
                 m1, m2, m3 = st.columns(3)
                 m1.metric("Weekly Cost", f"${r['total_cost']:.2f}")
                 m2.metric("Water Used", f"{r['total_water']:,.0f} gal")
@@ -332,28 +355,28 @@ with tab2:
         return fig
 
     st.markdown("**Weekly Driving Cost**")
-    st.plotly_chart(comparison_chart(round(your_drive_cost, 2), round(avg_drive_cost, 2), "$"), use_container_width=True)
+    st.plotly_chart(comparison_chart(round(your_drive_cost, 2), round(avg_drive_cost, 2), "$"), width="stretch")
     diff = your_drive_cost - avg_drive_cost
     st.caption(f"You spend ${abs(diff):.2f} {'more' if diff > 0 else 'less'} than the average American on driving each week." + ("" if diff > 0 else " Nice."))
 
     st.divider()
 
     st.markdown("**Weekly Food Water Usage**")
-    st.plotly_chart(comparison_chart(round(your_food_water), round(avg_food_water), "gal"), use_container_width=True)
+    st.plotly_chart(comparison_chart(round(your_food_water), round(avg_food_water), "gal"), width="stretch")
     diff = your_food_water - avg_food_water
     st.caption(f"Your food choices use {abs(diff):,.0f} {'more' if diff > 0 else 'fewer'} gallons of water than the average American.")
 
     st.divider()
 
     st.markdown("**Weekly Shower Water Usage**")
-    st.plotly_chart(comparison_chart(round(your_shower_gals), round(avg_shower_gals), "gal"), use_container_width=True)
+    st.plotly_chart(comparison_chart(round(your_shower_gals), round(avg_shower_gals), "gal"), width="stretch")
     diff = your_shower_gals - avg_shower_gals
     st.caption(f"You use {abs(diff):.0f} {'more' if diff > 0 else 'fewer'} gallons in the shower than the average American per week.")
 
     st.divider()
 
     st.markdown("**Weekly Home Energy Cost**")
-    st.plotly_chart(comparison_chart(round(your_energy_cost, 2), round(avg_energy_cost, 2), "$"), use_container_width=True)
+    st.plotly_chart(comparison_chart(round(your_energy_cost, 2), round(avg_energy_cost, 2), "$"), width="stretch")
     diff = your_energy_cost - avg_energy_cost
     st.caption(f"You spend ${abs(diff):.2f} {'more' if diff > 0 else 'less'} on home energy than the average American per week.")
 
