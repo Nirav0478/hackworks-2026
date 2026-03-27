@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 import streamlit as st
 from datetime import date
@@ -9,15 +10,17 @@ from utils.calculator import (
     calculate_savings,
     calculate_water,
 )
+from utils.history import export_history_json, import_history_json
 from utils.pdf_generator import generate_receipt_pdf
 
 st.set_page_config(page_title="The Guilt Receipt", page_icon="🧾", layout="centered")
 
+if "receipt_history" not in st.session_state:
+    st.session_state.receipt_history = []
+
 st.markdown("""
 <style>
-    /* clean up default streamlit padding */
     .block-container { padding-top: 2rem; }
-
     .badge {
         background: #1e1b3a;
         border-left: 3px solid #7c6af7;
@@ -65,6 +68,19 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+with st.expander("Load a previously saved receipt history"):
+    uploaded = st.file_uploader(
+        "Upload your guilt_receipts.json to restore past receipts",
+        type=["json"],
+        key="history_upload",
+    )
+    if uploaded is not None:
+        ok, msg = import_history_json(uploaded.read().decode("utf-8"))
+        if ok:
+            st.success(f"{msg} Scroll down to see your history.")
+        else:
+            st.error(msg)
+
 st.divider()
 
 # inputs
@@ -75,6 +91,7 @@ rideshare_trips = st.number_input("Rideshare trips (Uber/Lyft) this week", 0, 30
 st.subheader("What You Ate")
 burgers = st.slider("Beef meals this week", 0, 21, 4)
 chicken_meals = st.slider("Chicken meals this week", 0, 21, 5)
+veggie_meals = st.slider("Vegetarian meals this week", 0, 21, 2)
 
 st.subheader("Showers")
 shower_minutes = st.slider("Average shower length (minutes)", 1, 30, 10)
@@ -88,13 +105,25 @@ st.divider()
 
 # run the numbers
 driving = calculate_driving(miles_driven, rideshare_trips)
-food = calculate_food(burgers, chicken_meals)
+food = calculate_food(burgers, chicken_meals, veggie_meals)
 water = calculate_water(shower_minutes, showers_per_week)
 energy = calculate_energy(ac_hours, devices_left_on)
 savings = calculate_savings(miles_driven, burgers, shower_minutes, showers_per_week, ac_hours)
 
 total_cost = driving["drive_cost"] + driving["rideshare_cost"] + energy["ac_cost"] + energy["phantom_cost"]
 total_water = water["shower_gallons"] + food["total_water_food"]
+
+inputs = {
+    "miles_driven": miles_driven,
+    "rideshare_trips": rideshare_trips,
+    "burgers": burgers,
+    "chicken_meals": chicken_meals,
+    "veggie_meals": veggie_meals,
+    "shower_minutes": shower_minutes,
+    "showers_per_week": showers_per_week,
+    "ac_hours": ac_hours,
+    "devices_left_on": devices_left_on,
+}
 
 tab1, tab2 = st.tabs(["My Receipt", "How I Compare"])
 
@@ -126,7 +155,10 @@ with tab1:
     col1, col2 = st.columns([3, 1])
     col1.write(f"Chicken meals ({chicken_meals}x)")
     col2.write(f"**{food['water_chicken']:,} gal water**")
-    st.caption(f"Your meals alone used {food['total_water_food']:,} gallons of water this week.")
+    col1, col2 = st.columns([3, 1])
+    col1.write(f"Vegetarian meals ({veggie_meals}x)")
+    col2.write(f"**{food['water_veggie']:,} gal water**")
+    st.caption(f"Your meals used {food['total_water_food']:,} gallons of water this week.")
 
     st.divider()
 
@@ -177,24 +209,81 @@ with tab1:
 
     st.divider()
 
-    inputs = {
-        "miles_driven": miles_driven,
-        "rideshare_trips": rideshare_trips,
-        "burgers": burgers,
-        "chicken_meals": chicken_meals,
-        "shower_minutes": shower_minutes,
-        "showers_per_week": showers_per_week,
-        "ac_hours": ac_hours,
-        "devices_left_on": devices_left_on,
-    }
-    pdf = generate_receipt_pdf(driving, food, water, energy, savings, total_cost, total_water, inputs)
-    st.download_button(
-        label="Download My Receipt as PDF",
-        data=pdf,
-        file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.pdf",
-        mime="application/pdf",
-        use_container_width=True,
-    )
+    # save & export
+    st.markdown("#### Save This Receipt")
+    col_pdf, col_json = st.columns(2)
+
+    with col_json:
+        single_receipt = {
+            "week_of": date.today().strftime("%B %d, %Y"),
+            "inputs": inputs,
+            "results": {
+                "driving": driving,
+                "food": food,
+                "water": water,
+                "energy": energy,
+                "savings": savings,
+                "total_cost": total_cost,
+                "total_water": total_water,
+            },
+        }
+        st.download_button(
+            label="Download JSON",
+            data=json.dumps(single_receipt, indent=2),
+            file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+
+    with col_pdf:
+        pdf = generate_receipt_pdf(driving, food, water, energy, savings, total_cost, total_water, inputs)
+        st.download_button(
+            label="Download PDF",
+            data=pdf,
+            file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+
+    # history
+    if st.session_state.receipt_history:
+        st.divider()
+        st.markdown("#### Receipt History")
+        col_dl, col_clr = st.columns([3, 1])
+        with col_dl:
+            st.download_button(
+                label="Export full history as JSON",
+                data=export_history_json(),
+                file_name="guilt_receipts.json",
+                mime="application/json",
+                use_container_width=True,
+            )
+        with col_clr:
+            if st.button("Clear history", use_container_width=True):
+                st.session_state.receipt_history = []
+                st.rerun()
+
+        for i, receipt in enumerate(st.session_state.receipt_history):
+            r = receipt["results"]
+            inp = receipt.get("inputs", {})
+            label = f"{receipt['week_of']}  |  ${r['total_cost']:.2f} cost  |  {r['total_water']:,.0f} gal water"
+            with st.expander(label, expanded=(i == 0)):
+                st.caption(f"Saved at {receipt['saved_at']}")
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Weekly Cost", f"${r['total_cost']:.2f}")
+                m2.metric("Water Used", f"{r['total_water']:,.0f} gal")
+                m3.metric("Traffic Hours", f"{r['driving'].get('hours_in_traffic', '—')} hrs")
+                if inp:
+                    st.markdown("**Your inputs that week:**")
+                    ic1, ic2 = st.columns(2)
+                    ic1.write(f"Miles driven: **{inp.get('miles_driven', '—')}**")
+                    ic1.write(f"Rideshare trips: **{inp.get('rideshare_trips', '—')}**")
+                    ic1.write(f"Beef meals: **{inp.get('burgers', '—')}**")
+                    ic1.write(f"Chicken meals: **{inp.get('chicken_meals', '—')}**")
+                    ic1.write(f"Veggie meals: **{inp.get('veggie_meals', '—')}**")
+                    ic2.write(f"Shower: **{inp.get('shower_minutes', '—')} min x {inp.get('showers_per_week', '—')}**")
+                    ic2.write(f"AC hours: **{inp.get('ac_hours', '—')}**")
+                    ic2.write(f"Phantom devices: **{inp.get('devices_left_on', '—')}**")
 
 with tab2:
     import plotly.graph_objects as go
@@ -213,28 +302,21 @@ with tab2:
     your_shower_gals = water["shower_gallons"]
     your_energy_cost = energy["ac_cost"] + energy["phantom_cost"]
 
-    # colors: you = purple, avg = muted grey
     YOU_COLOR = "#7c6af7"
     AVG_COLOR = "#4a4a5a"
 
     def comparison_chart(your_val, avg_val, unit):
         fig = go.Figure()
         fig.add_trace(go.Bar(
-            x=["You"],
-            y=[your_val],
-            marker_color=YOU_COLOR,
-            name="You",
-            text=[f"{your_val:,.1f} {unit}"],
-            textposition="outside",
+            x=["You"], y=[your_val],
+            marker_color=YOU_COLOR, name="You",
+            text=[f"{your_val:,.1f} {unit}"], textposition="outside",
             textfont=dict(color="#cccccc", size=13),
         ))
         fig.add_trace(go.Bar(
-            x=["Avg American"],
-            y=[avg_val],
-            marker_color=AVG_COLOR,
-            name="Avg American",
-            text=[f"{avg_val:,.1f} {unit}"],
-            textposition="outside",
+            x=["Avg American"], y=[avg_val],
+            marker_color=AVG_COLOR, name="Avg American",
+            text=[f"{avg_val:,.1f} {unit}"], textposition="outside",
             textfont=dict(color="#cccccc", size=13),
         ))
         fig.update_layout(
@@ -243,15 +325,8 @@ with tab2:
             showlegend=False,
             margin=dict(t=30, b=10, l=0, r=0),
             height=260,
-            yaxis=dict(
-                showgrid=True,
-                gridcolor="#2a2a2a",
-                tickfont=dict(color="#888"),
-                zeroline=False,
-            ),
-            xaxis=dict(
-                tickfont=dict(color="#ccc", size=13),
-            ),
+            yaxis=dict(showgrid=True, gridcolor="#2a2a2a", tickfont=dict(color="#888"), zeroline=False),
+            xaxis=dict(tickfont=dict(color="#ccc", size=13)),
             bargap=0.4,
         )
         return fig

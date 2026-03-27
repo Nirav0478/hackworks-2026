@@ -1,15 +1,14 @@
 # All conversion factors are sourced from EPA, USDA, and DOE published data.
-# Keeping these here makes it easy to update and cite during the presentation.
 
 # --- Driving ---
 COST_PER_MILE        = 0.21    # IRS 2024 standard mileage rate ($/mile)
 GAS_PRICE_PER_GALLON = 3.20    # US avg gas price
 MPG_AVERAGE          = 28      # avg US passenger car fuel economy (EPA)
 RIDESHARE_TRIP_AVG   = 14.00   # avg Uber/Lyft trip cost in USD
-
 # --- Food & Water (USDA) ---
-WATER_PER_BURGER     = 660     # gallons per beef meal
-WATER_PER_CHICKEN    = 330     # gallons per chicken meal
+WATER_PER_BURGER = 660  # gallons per beef meal
+WATER_PER_CHICKEN = 330  # gallons per chicken meal
+WATER_PER_VEGGIE = 75   # gallons per vegetarian meal (avg of legumes/tofu/veg)
 
 # --- Showers (EPA WaterSense) ---
 WATER_PER_SHOWER_MIN = 2.1     # gallons per minute (standard showerhead)

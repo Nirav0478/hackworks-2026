@@ -1,6 +1,6 @@
 from utils.constants import (
     COST_PER_MILE, MPG_AVERAGE, RIDESHARE_TRIP_AVG,
-    WATER_PER_BURGER, WATER_PER_CHICKEN,
+    WATER_PER_BURGER, WATER_PER_CHICKEN, WATER_PER_VEGGIE,
     WATER_PER_SHOWER_MIN,
     KWH_PER_AC_HOUR, ELECTRICITY_RATE, CHARGER_WATTS, HOURS_IN_WEEK
 )
@@ -20,13 +20,15 @@ def calculate_driving(miles_driven, rideshare_trips):
     }
 
 
-def calculate_food(burgers, chicken_meals):
+def calculate_food(burgers, chicken_meals, veggie_meals=0):
     water_beef    = burgers * WATER_PER_BURGER
     water_chicken = chicken_meals * WATER_PER_CHICKEN
+    water_veggie  = veggie_meals * WATER_PER_VEGGIE
     return {
         "water_beef": water_beef,
         "water_chicken": water_chicken,
-        "total_water_food": water_beef + water_chicken,
+        "water_veggie": water_veggie,
+        "total_water_food": water_beef + water_chicken + water_veggie,
     }
 
 
