@@ -87,8 +87,8 @@ with st.expander("📂 Load a previously saved receipt history"):
     if uploaded is not None:
         ok, msg = import_history_json(uploaded.read().decode("utf-8"))
         if ok:
-            st.success(f"✅ {msg}")
-            st.rerun()
+            # No st.rerun() here — history renders below on the same pass
+            st.success(f"✅ {msg} Scroll down to see your history.")
         else:
             st.error(f"❌ {msg}")
 
@@ -145,7 +145,7 @@ inputs = {
 
 # ── live receipt (updates as sliders move) ─────────────────────────────────────
 st.markdown("---")
-st.markdown(f"### 🧾 YOUR RECEIPT — LIVE")
+st.markdown("### 🧾 YOUR RECEIPT — LIVE")
 st.caption(f"Week of {date.today().strftime('%B %d, %Y')} | Updates as you go 💚")
 
 # Driving
@@ -245,20 +245,7 @@ st.markdown("#### 💾 Save This Receipt")
 
 col_pdf, col_json = st.columns(2)
 
-# PDF export
-pdf_buffer = generate_receipt_pdf(
-    driving, food, water, energy, savings, total_cost, total_water, inputs
-)
-with col_pdf:
-    st.download_button(
-        label="📄 Download PDF",
-        data=pdf_buffer,
-        file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.pdf",
-        mime="application/pdf",
-        use_container_width=True,
-    )
-
-# JSON export — snapshot of this single receipt
+# JSON — lightweight, safe to generate every render
 with col_json:
     single_receipt = {
         "week_of": date.today().strftime("%B %d, %Y"),
@@ -280,6 +267,22 @@ with col_json:
         mime="application/json",
         use_container_width=True,
     )
+
+# PDF — generated lazily only when the button is clicked, avoiding
+# MediaFileStorageError that occurs when blobs are pre-generated on every render
+with col_pdf:
+    if st.button("📄 Generate & Download PDF", use_container_width=True):
+        pdf_buffer = generate_receipt_pdf(
+            driving, food, water, energy, savings, total_cost, total_water, inputs
+        )
+        st.download_button(
+            label="📥 Click here to save PDF",
+            data=pdf_buffer,
+            file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key="pdf_save",
+        )
 
 # ── full history section (only shown when history exists) ──────────────────────
 if st.session_state.receipt_history:
