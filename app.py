@@ -1,3 +1,4 @@
+import json
 from datetime import date
 
 import streamlit as st
@@ -9,10 +10,15 @@ from utils.calculator import (
     calculate_savings,
     calculate_water,
 )
+from utils.history import export_history_json, import_history_json
 from utils.pdf_generator import generate_receipt_pdf
 
 # ── page config ────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="The Guilt Receipt", page_icon="🧾", layout="centered")
+
+# ── session state init ─────────────────────────────────────────────────────────
+if "receipt_history" not in st.session_state:
+    st.session_state.receipt_history = []
 
 # ── styles ─────────────────────────────────────────────────────────────────────
 st.markdown(
@@ -71,6 +77,21 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ── JSON import (top of page) ──────────────────────────────────────────────────
+with st.expander("📂 Load a previously saved receipt history"):
+    uploaded = st.file_uploader(
+        "Upload your guilt_receipts.json to restore past receipts",
+        type=["json"],
+        key="history_upload",
+    )
+    if uploaded is not None:
+        ok, msg = import_history_json(uploaded.read().decode("utf-8"))
+        if ok:
+            st.success(f"✅ {msg}")
+            st.rerun()
+        else:
+            st.error(f"❌ {msg}")
+
 st.divider()
 
 # ── inputs ─────────────────────────────────────────────────────────────────────
@@ -111,7 +132,18 @@ total_cost = (
 )
 total_water = water["shower_gallons"] + food["total_water_food"]
 
-# ── live receipt (updates as sliders move) ────────────────────────────────────
+inputs = {
+    "miles_driven": miles_driven,
+    "rideshare_trips": rideshare_trips,
+    "burgers": burgers,
+    "chicken_meals": chicken_meals,
+    "shower_minutes": shower_minutes,
+    "showers_per_week": showers_per_week,
+    "ac_hours": ac_hours,
+    "devices_left_on": devices_left_on,
+}
+
+# ── live receipt (updates as sliders move) ─────────────────────────────────────
 st.markdown("---")
 st.markdown(f"### 🧾 YOUR RECEIPT — LIVE")
 st.caption(f"Week of {date.today().strftime('%B %d, %Y')} | Updates as you go 💚")
@@ -208,26 +240,90 @@ st.markdown(
 
 st.divider()
 
-# ── PDF download ───────────────────────────────────────────────────────────────
-inputs = {
-    "miles_driven": miles_driven,
-    "rideshare_trips": rideshare_trips,
-    "burgers": burgers,
-    "chicken_meals": chicken_meals,
-    "shower_minutes": shower_minutes,
-    "showers_per_week": showers_per_week,
-    "ac_hours": ac_hours,
-    "devices_left_on": devices_left_on,
-}
+# ── save & export buttons ──────────────────────────────────────────────────────
+st.markdown("#### 💾 Save This Receipt")
 
+col_pdf, col_json = st.columns(2)
+
+# PDF export
 pdf_buffer = generate_receipt_pdf(
     driving, food, water, energy, savings, total_cost, total_water, inputs
 )
+with col_pdf:
+    st.download_button(
+        label="📄 Download PDF",
+        data=pdf_buffer,
+        file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.pdf",
+        mime="application/pdf",
+        use_container_width=True,
+    )
 
-st.download_button(
-    label="📄 Download My Receipt as PDF",
-    data=pdf_buffer,
-    file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.pdf",
-    mime="application/pdf",
-    use_container_width=True,
-)
+# JSON export — snapshot of this single receipt
+with col_json:
+    single_receipt = {
+        "week_of": date.today().strftime("%B %d, %Y"),
+        "inputs": inputs,
+        "results": {
+            "driving": driving,
+            "food": food,
+            "water": water,
+            "energy": energy,
+            "savings": savings,
+            "total_cost": total_cost,
+            "total_water": total_water,
+        },
+    }
+    st.download_button(
+        label="📋 Download JSON",
+        data=json.dumps(single_receipt, indent=2),
+        file_name=f"guilt_receipt_{date.today().strftime('%Y-%m-%d')}.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+
+# ── full history section (only shown when history exists) ──────────────────────
+if st.session_state.receipt_history:
+    st.divider()
+    st.markdown("#### 📋 Receipt History")
+    col_dl, col_clr = st.columns([3, 1])
+    with col_dl:
+        st.download_button(
+            label="💾 Export full history as JSON",
+            data=export_history_json(),
+            file_name="guilt_receipts.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+    with col_clr:
+        if st.button("🗑️ Clear history", use_container_width=True):
+            st.session_state.receipt_history = []
+            st.rerun()
+
+    for i, receipt in enumerate(st.session_state.receipt_history):
+        r = receipt["results"]
+        inp = receipt.get("inputs", {})
+        label = (
+            f"🧾 {receipt['week_of']}  |  "
+            f"${r['total_cost']:.2f} cost  |  "
+            f"{r['total_water']:,.0f} gal water"
+        )
+        with st.expander(label, expanded=(i == 0)):
+            st.caption(f"Saved at {receipt['saved_at']}")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Weekly Cost", f"${r['total_cost']:.2f}")
+            m2.metric("Water Used", f"{r['total_water']:,.0f} gal")
+            m3.metric(
+                "Traffic Hours", f"{r['driving'].get('hours_in_traffic', '—')} hrs"
+            )
+            if inp:
+                st.markdown("**Your inputs that week:**")
+                ic1, ic2 = st.columns(2)
+                ic1.write(f"🚗 Miles driven: **{inp.get('miles_driven', '—')}**")
+                ic1.write(f"🚕 Rideshare trips: **{inp.get('rideshare_trips', '—')}**")
+                ic1.write(f"🍔 Beef meals: **{inp.get('burgers', '—')}**")
+                ic1.write(f"🍗 Chicken meals: **{inp.get('chicken_meals', '—')}**")
+                ic2.write(
+                    f"🚿 Shower: **{inp.get('shower_minutes', '—')} min × {inp.get('showers_per_week', '—')}**"
+                )
+                ic2.write(f"❄️ AC hours: **{inp.get('ac_hours', '—')}**")
+                ic2.write(f"🔌 Phantom devices: **{inp.get('devices_left_on', '—')}**")
