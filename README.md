@@ -1,3 +1,5 @@
+My team's submission for the Hackworks 2026 hackathon.
+
 # The Guilt Receipt
 Track your weekly driving, food, water, and energy usage and read it in an organized reciept!
 
@@ -6,16 +8,13 @@ Track your weekly driving, food, water, and energy usage and read it in an organ
 - Compare your stats to the averages in the US
 - Export/Import JSON files to keep a history
 
-## [See it in action!](https://guiltreciept-hackworks2026.streamlit.app/)
-
-...or you can run it locally like so:
+##Deploy locally
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
 ## How the numbers work
-
 All conversion factors are sourced from EPA, USDA, and DOE published data hardcoded into the app as constants.
 
 | Factor | Source | Value |
@@ -28,7 +27,6 @@ All conversion factors are sourced from EPA, USDA, and DOE published data hardco
 | Electricity rate | EIA US avg | $0.13/kWh |
 
 ## Team
-
 - Aditya - Designed frontend and .pdf export. Curated project demo.
 - Nirav - Repo owner and project manager. Assisted other team members with any problems.
 - Josh - Designed history and .json import/export features.
